@@ -70,7 +70,19 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         "--keyword", type=str,
         help="Optional target keyword to verify in title/description"
     )
-    # Spelling options removed
+    # Firewall/proxy options
+    parser.add_argument(
+        "--proxy", type=str,
+        help="HTTP(S) proxy URL to use for all requests (overrides env HTTP(S)_PROXY)"
+    )
+    parser.add_argument(
+        "--ca-bundle", type=str,
+        help="Path to custom CA bundle file for TLS verification (sets REQUESTS_CA_BUNDLE)"
+    )
+    parser.add_argument(
+        "--insecure", action="store_true",
+        help="Disable TLS verification (not recommended)."
+    )
     return parser.parse_args(argv)
 
 def run_all_checks(url: str, *, timeout: int = 20, use_scraperapi: bool = False, max_links: int = 25, quiet: bool = False, keyword: Optional[str] = None) -> Dict[str, Any]:
@@ -508,6 +520,14 @@ def _show_history(history_path: str, limit: int = 20):
 
 if __name__ == "__main__":
     args = parse_args()
+    # Apply proxy/TLS options early via environment so all modules honor them
+    if getattr(args, 'proxy', None):
+        os.environ["HTTP_PROXY"] = args.proxy
+        os.environ["HTTPS_PROXY"] = args.proxy
+    if getattr(args, 'ca_bundle', None):
+        os.environ["REQUESTS_CA_BUNDLE"] = args.ca_bundle
+    if getattr(args, 'insecure', False):
+        os.environ["SEO_CHECKER_INSECURE"] = "1"
     # Show history and exit, if requested
     if args.show_history is not None:
         _show_history(args.history_file, args.show_history)
